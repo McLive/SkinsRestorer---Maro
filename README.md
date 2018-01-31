@@ -12,6 +12,4 @@
 
  Website | [click here](https://skinsrestorer.net/)
 
- We'd like to give a special thanks to the team behind [EssentialsX](https://discord.gg/F7gexAQ) for providing us with access to their CI server!
-
- [![Build Status](https://ci.ender.zone/buildStatus/icon?job=SkinRestorerX)](https://ci.ender.zone/job/SkinRestorerX)
+ 
