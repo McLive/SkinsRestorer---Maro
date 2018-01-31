@@ -12,18 +12,21 @@ import skinsrestorer.shared.storage.Locale;
 import skinsrestorer.shared.storage.SkinStorage;
 import skinsrestorer.shared.utils.MojangAPI;
 import skinsrestorer.shared.utils.MojangAPI.SkinRequestException;
+
 import java.util.concurrent.TimeUnit;
 
 public class SkinCommand implements CommandExecutor {
-	
-	//Method called for the commands help.
-	public void help(Player p) {
-        p.sendMessage(Locale.SR_LINE);
+
+    //Method called for the commands help.
+    public void help(Player p) {
+        if (!Locale.SR_LINE.isEmpty())
+            p.sendMessage(Locale.SR_LINE);
         p.sendMessage(Locale.HELP_PLAYER.replace("%ver%", SkinsRestorer.getInstance().getVersion()));
         if (p.hasPermission("skinsrestorer.cmds") || p.isOp())
             p.sendMessage(Locale.HELP_SR);
-        p.sendMessage(Locale.SR_LINE);
-	}
+        if (!Locale.SR_LINE.isEmpty())
+            p.sendMessage(Locale.SR_LINE);
+    }
 
     @Override
     public boolean onCommand(CommandSender sender, Command arg1, String arg2, String[] args) {
@@ -35,23 +38,22 @@ public class SkinCommand implements CommandExecutor {
 
         final Player p = (Player) sender;
 
-        if (!Config.SKINWITHOUTPERM) {
-            if (p.hasPermission("skinsrestorer.playercmds") || p.isOp()) {
-            } else {
-                p.sendMessage(Locale.PLAYER_HAS_NO_PERMISSION);
-                return true;
-            }
-        }
-        
         // Skin Help
         if (args.length == 0 || args.length > 2) {
-            help(p);
+            if (!Config.SKINWITHOUTPERM) {
+                if (p.hasPermission("skinsrestorer.playercmds")) {
+                    help(p);
+                } else {
+                    p.sendMessage(Locale.PLAYER_HAS_NO_PERMISSION);
+                    return true;
+                }
+            }
             return true;
         }
-        
+
         // Skin Clear and Skin (name)
         if (args.length == 1) {
-        	if (args[0].equalsIgnoreCase("clear")) {
+            if (args[0].equalsIgnoreCase("clear")) {
                 Object props = null;
 
                 SkinStorage.removePlayerSkin(p.getName());
@@ -61,7 +63,7 @@ public class SkinCommand implements CommandExecutor {
                 p.sendMessage(Locale.SKIN_CLEAR_SUCCESS);
 
                 return true;
-        	} else {
+            } else {
 
                 StringBuilder sb = new StringBuilder();
                 sb.append(args[0]);
@@ -77,7 +79,7 @@ public class SkinCommand implements CommandExecutor {
                             }
                     }
 
-                if (p.hasPermission("skinsrestorer.bypasscooldown") || p.isOp()) {
+                if (p.hasPermission("skinsrestorer.bypasscooldown")) {
 
                 } else {
                     if (CooldownStorage.hasCooldown(p.getName())) {
@@ -89,35 +91,28 @@ public class SkinCommand implements CommandExecutor {
                 CooldownStorage.resetCooldown(p.getName());
                 CooldownStorage.setCooldown(p.getName(), Config.SKIN_CHANGE_COOLDOWN, TimeUnit.SECONDS);
 
-                Bukkit.getScheduler().runTask(SkinsRestorer.getInstance(), new Runnable() {
+                Bukkit.getScheduler().runTaskAsynchronously(SkinsRestorer.getInstance(), () -> {
+                    try {
+                        MojangAPI.getUUID(skin);
 
-                    @Override
-                    public void run() {
-
-                        try {
-                            MojangAPI.getUUID(skin);
-
-
-                            SkinStorage.setPlayerSkin(p.getName(), skin);
-                            SkinsRestorer.getInstance().getFactory().applySkin(p,
-                                    SkinStorage.getOrCreateSkinForPlayer(p.getName()));
-                            p.sendMessage(Locale.SKIN_CHANGE_SUCCESS);
-                            return;
-                        } catch (SkinRequestException e) {
-                            p.sendMessage(e.getReason());
-                            return;
-                        }
+                        SkinStorage.setPlayerSkin(p.getName(), skin);
+                        SkinsRestorer.getInstance().getFactory().applySkin(p,
+                                SkinStorage.getOrCreateSkinForPlayer(p.getName()));
+                        p.sendMessage(Locale.SKIN_CHANGE_SUCCESS);
+                        return;
+                    } catch (SkinRequestException e) {
+                        p.sendMessage(e.getReason());
+                        return;
                     }
-
                 });
                 return true;
-        	}
+            }
         }
-        
+
         // Skin Set
         if (args.length == 2) {
-        	if (args[0].equalsIgnoreCase("set")) {
-        		
+            if (args[0].equalsIgnoreCase("set")) {
+
                 StringBuilder sb = new StringBuilder();
                 sb.append(args[1]);
 
@@ -132,7 +127,7 @@ public class SkinCommand implements CommandExecutor {
                             }
                     }
 
-                if (p.hasPermission("skinsrestorer.bypasscooldown") || p.isOp()) {
+                if (p.hasPermission("skinsrestorer.bypasscooldown")) {
 
                 } else {
                     if (CooldownStorage.hasCooldown(p.getName())) {
@@ -144,33 +139,25 @@ public class SkinCommand implements CommandExecutor {
                 CooldownStorage.resetCooldown(p.getName());
                 CooldownStorage.setCooldown(p.getName(), Config.SKIN_CHANGE_COOLDOWN, TimeUnit.SECONDS);
 
-                Bukkit.getScheduler().runTask(SkinsRestorer.getInstance(), new Runnable() {
+                Bukkit.getScheduler().runTaskAsynchronously(SkinsRestorer.getInstance(), () -> {
+                    try {
+                        MojangAPI.getUUID(skin);
 
-                    @Override
-                    public void run() {
-
-                        try {
-                            MojangAPI.getUUID(skin);
-
-
-                            SkinStorage.setPlayerSkin(p.getName(), skin);
-                            SkinsRestorer.getInstance().getFactory().applySkin(p,
-                                    SkinStorage.getOrCreateSkinForPlayer(p.getName()));
-                            p.sendMessage(Locale.SKIN_CHANGE_SUCCESS);
-                            return;
-                        } catch (SkinRequestException e) {
-                            p.sendMessage(e.getReason());
-                            return;
-                        }
+                        SkinStorage.setPlayerSkin(p.getName(), skin);
+                        SkinsRestorer.getInstance().getFactory().applySkin(p, SkinStorage.getOrCreateSkinForPlayer(p.getName()));
+                        p.sendMessage(Locale.SKIN_CHANGE_SUCCESS);
+                        return;
+                    } catch (SkinRequestException e) {
+                        p.sendMessage(e.getReason());
+                        return;
                     }
-
                 });
                 return true;
-        	} else {
-        		help(p);
-        		return true;
-        	}
+            } else {
+                help(p);
+                return true;
+            }
         }
-		return true;
+        return true;
     }
 }

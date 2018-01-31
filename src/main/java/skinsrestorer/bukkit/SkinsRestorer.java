@@ -1,6 +1,11 @@
 package skinsrestorer.bukkit;
 
 import org.bstats.bukkit.MetricsLite;
+
+import org.inventivetalent.update.spiget.SpigetUpdate;
+import org.inventivetalent.update.spiget.UpdateCallback;
+import org.inventivetalent.update.spiget.comparator.VersionComparator;
+
 import org.bukkit.Bukkit;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -13,10 +18,10 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.plugin.messaging.PluginMessageListener;
+
 import skinsrestorer.bukkit.commands.GUICommand;
 import skinsrestorer.bukkit.commands.SkinCommand;
 import skinsrestorer.bukkit.commands.SrCommand;
-import skinsrestorer.bukkit.menu.SkinsGUI;
 import skinsrestorer.bukkit.skinfactory.SkinFactory;
 import skinsrestorer.bukkit.skinfactory.UniversalSkinFactory;
 import skinsrestorer.shared.storage.Config;
@@ -27,10 +32,10 @@ import skinsrestorer.shared.utils.MojangAPI;
 import skinsrestorer.shared.utils.MojangAPI.SkinRequestException;
 import skinsrestorer.shared.utils.MySQL;
 import skinsrestorer.shared.utils.ReflectionUtil;
-import skinsrestorer.shared.utils.updater.bukkit.SpigetUpdate;
-import skinsrestorer.shared.utils.updater.core.UpdateCallback;
-import skinsrestorer.shared.utils.updater.core.VersionComparator;
-import java.io.*;
+
+import java.io.ByteArrayInputStream;
+import java.io.DataInputStream;
+import java.io.File;
 import java.util.List;
 
 public class SkinsRestorer extends JavaPlugin {
@@ -55,19 +60,17 @@ public class SkinsRestorer extends JavaPlugin {
     public String getVersion() {
         return getDescription().getVersion();
     }
-    
 
-    @Override
     public void onEnable() {
-    	
+
         ConsoleCommandSender console = getServer().getConsoleSender();
 
-    	@SuppressWarnings("unused")
+        @SuppressWarnings("unused")
         MetricsLite metrics = new MetricsLite(this);
-        
+
         SpigetUpdate updater = new SpigetUpdate(this, 2124);
         updater.setVersionComparator(VersionComparator.EQUAL);
-        updater.setVersionComparator(VersionComparator.SEM_VER_BETA);
+        updater.setVersionComparator(VersionComparator.SEM_VER);
 
         instance = this;
 
@@ -88,19 +91,23 @@ public class SkinsRestorer extends JavaPlugin {
                 factory = new UniversalSkinFactory();
             }
         }
-        console.sendMessage("§e[§2SkinsRestorer§e] §aDetected Minecraft §e" + ReflectionUtil.serverVersion + "§a, using §e"+ factory.getClass().getSimpleName() + "§a.");
-
+        console.sendMessage("§e[§2SkinsRestorer§e] §aDetected Minecraft §e" + ReflectionUtil.serverVersion + "§a, using §e" + factory.getClass().getSimpleName() + "§a.");
 
         // Multiverse Core support.
         MCoreAPI.init();
         if (MCoreAPI.check())
             console.sendMessage("§e[§2SkinsRestorer§e] §aDetected §eMultiverse-Core§a! Using it for dimensions.");
 
+        // Detect ChangeSkin
+        if(getServer().getPluginManager().getPlugin("ChangeSkin") != null) {
+            console.sendMessage("§e[§2SkinsRestorer§e] §cWe have detected ChangeSkin on your server, disabling SkinsRestorer.");
+            Bukkit.getPluginManager().disablePlugin(this);
+            return;
+        }
 
         // Bungeecord stuff
         try {
-            bungeeEnabled = YamlConfiguration.loadConfiguration(new File("spigot.yml"))
-                    .getBoolean("settings.bungeecord");
+            bungeeEnabled = YamlConfiguration.loadConfiguration(new File("spigot.yml")).getBoolean("settings.bungeecord");
         } catch (Exception e) {
             bungeeEnabled = false;
         }
@@ -213,27 +220,28 @@ public class SkinsRestorer extends JavaPlugin {
         Bukkit.getPluginManager().registerEvents(new SkinsGUI(), this);
         Bukkit.getPluginManager().registerEvents(new Listener() {
 
-            // LoginEvent happens on attemptLogin so its the best place to set
-            // the skin
+            // LoginEvent happens on attemptLogin so its the best place to set the skin
             @EventHandler
             public void onLogin(PlayerJoinEvent e) {
-                try {
-                    if (Config.DISABLE_ONJOIN_SKINS) {
-                        factory.applySkin(e.getPlayer(),
-                                SkinStorage.getSkinData(SkinStorage.getPlayerSkin(e.getPlayer().getName())));
-                        return;
-                    }
-                    if (Config.DEFAULT_SKINS_ENABLED)
-                        if (SkinStorage.getPlayerSkin(e.getPlayer().getName()) == null) {
-                            List<String> skins = Config.DEFAULT_SKINS;
-                            int randomNum = 0 + (int) (Math.random() * skins.size());
+                Bukkit.getScheduler().runTaskAsynchronously(SkinsRestorer.getInstance(), () -> {
+                    try {
+                        if (Config.DISABLE_ONJOIN_SKINS) {
                             factory.applySkin(e.getPlayer(),
-                                    SkinStorage.getOrCreateSkinForPlayer(skins.get(randomNum)));
+                                    SkinStorage.getSkinData(SkinStorage.getPlayerSkin(e.getPlayer().getName())));
                             return;
                         }
-                    factory.applySkin(e.getPlayer(), SkinStorage.getOrCreateSkinForPlayer(e.getPlayer().getName()));
-                } catch (Exception ex) {
-                }
+                        if (Config.DEFAULT_SKINS_ENABLED)
+                            if (SkinStorage.getPlayerSkin(e.getPlayer().getName()) == null) {
+                                List<String> skins = Config.DEFAULT_SKINS;
+                                int randomNum = 0 + (int) (Math.random() * skins.size());
+                                factory.applySkin(e.getPlayer(),
+                                        SkinStorage.getOrCreateSkinForPlayer(skins.get(randomNum)));
+                                return;
+                            }
+                        factory.applySkin(e.getPlayer(), SkinStorage.getOrCreateSkinForPlayer(e.getPlayer().getName()));
+                    } catch (Exception ex) {
+                    }
+                });
             }
         }, this);
 
@@ -256,10 +264,10 @@ public class SkinsRestorer extends JavaPlugin {
                                 console.sendMessage("§e[§2SkinsRestorer§e]     A new version is available! Downloading it now...");
                                 console.sendMessage("§e[§2SkinsRestorer§e] §a----------------------------------------------");
                                 if (updater.downloadUpdate()) {
-                                	console.sendMessage("§e[§2SkinsRestorer§e] Update downloaded successfully, it will be applied on the next restart.");
+                                    console.sendMessage("§e[§2SkinsRestorer§e] Update downloaded successfully, it will be applied on the next restart.");
                                 } else {
                                     // Update failed
-                                	console.sendMessage("§e[§2SkinsRestorer§e] §cCould not download the update, reason: " + updater.getFailReason());
+                                    console.sendMessage("§e[§2SkinsRestorer§e] §cCould not download the update, reason: " + updater.getFailReason());
                                 }
                             }
                         }
@@ -284,7 +292,7 @@ public class SkinsRestorer extends JavaPlugin {
                             SkinStorage.setSkinData(skin, MojangAPI.getSkinProperty(MojangAPI.getUUID(skin)));
                         } catch (SkinRequestException e) {
                             if (SkinStorage.getSkinData(skin) == null)
-                                console.sendMessage( "§e[§2SkinsRestorer§e] §cDefault Skin '" + skin + "' request error: " + e.getReason());
+                                console.sendMessage("§e[§2SkinsRestorer§e] §cDefault Skin '" + skin + "' request error: " + e.getReason());
                         }
             }
 
