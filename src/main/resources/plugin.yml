@@ -15,7 +15,6 @@ commands:
     description: Opens skins GUI
   skinver:
     description: Shows the plugin version.
-    description: Displays version of the plugin
 permissions:
    skinsrestorer.playercmds:
      description: Allows access to all main commands.
