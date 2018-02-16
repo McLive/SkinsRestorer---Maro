@@ -19,9 +19,9 @@ import java.util.regex.Pattern;
 public class MojangAPI {
 
     private static final String uuidurl = "https://api.minetools.eu/uuid/%name%";
-    private static final String uuidurl_mojang = "https://api.minetools.eu/uuid/%name%";
+    private static final String uuidurl_mojang = "https://api.mojang.com/users/profiles/minecraft/";
     private static final String skinurl = "https://api.minetools.eu/profile/%uuid%";
-    private static final String skinurl_mojang = "https://api.minetools.eu/profile/%uuid%";
+    private static final String skinurl_mojang = "https://sessionserver.mojang.com/session/minecraft/profile/";
     private static MojangAPI mojangapi = new MojangAPI();
 
     /**
