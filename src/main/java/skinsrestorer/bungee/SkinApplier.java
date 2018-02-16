@@ -31,7 +31,6 @@ public class SkinApplier {
                         return;
                     }
                     LoginResult profile = null;
-
                     try {
                         // NEW BUNGEECORD
                         profile = (net.md_5.bungee.connection.LoginResult) ReflectionUtil.invokeConstructor(LoginResult,
@@ -51,7 +50,6 @@ public class SkinApplier {
                     profile.getProperties()[0].setValue(newprops[0].getValue());
                     profile.getProperties()[0].setSignature(newprops[0].getSignature());
                     ReflectionUtil.setObject(InitialHandler.class, handler, "loginProfile", profile);
-
                     if (SkinsRestorer.getInstance().isMultiBungee())
                         sendUpdateRequest(p, textures);
                     else

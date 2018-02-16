@@ -240,7 +240,6 @@ public class SkinStorage {
                     return null;
 
                 BufferedReader buf = new BufferedReader(new FileReader(skinFile));
-
                 String line, value = "", signature = "", timestamp = "";
                 for (int i = 0; i < 3; i++)
                     if ((line = buf.readLine()) != null)
