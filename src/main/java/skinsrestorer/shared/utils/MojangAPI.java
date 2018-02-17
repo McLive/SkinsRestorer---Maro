@@ -4,6 +4,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import skinsrestorer.bukkit.SkinsRestorer;
 import skinsrestorer.shared.storage.Locale;
 import skinsrestorer.shared.storage.SkinStorage;
 
@@ -41,15 +42,14 @@ public class MojangAPI {
             JsonElement element = new JsonParser().parse(output);
             JsonObject obj = element.getAsJsonObject();
 
+            Property property = new Property();
+
             if (obj.has("raw")) {
                 JsonObject raw = obj.getAsJsonObject("raw");
-                JsonArray properties = raw.getAsJsonArray("properties");
-                JsonObject propertiesObject = properties.get(0).getAsJsonObject();
 
-                String signature = propertiesObject.get("signature").getAsString();
-                String value = propertiesObject.get("value").getAsString();
-
-                return SkinStorage.createProperty("textures", value, signature);
+                if (property.valuesFromJson(raw)) {
+                    return SkinStorage.createProperty("textures", property.getValue(), property.getSignature());
+                }
             }
             return false;
         } catch (Exception e) {
@@ -65,14 +65,10 @@ public class MojangAPI {
             JsonElement element = new JsonParser().parse(output);
             JsonObject obj = element.getAsJsonObject();
 
-            if (obj.has("properties")) {
-                JsonArray properties = obj.getAsJsonArray("properties");
-                JsonObject propertiesObject = properties.get(0).getAsJsonObject();
+            Property property = new Property();
 
-                String signature = propertiesObject.get("signature").getAsString();
-                String value = propertiesObject.get("value").getAsString();
-
-                return SkinStorage.createProperty("textures", value, signature);
+            if (property.valuesFromJson(obj)) {
+                return SkinStorage.createProperty("textures", property.getValue(), property.getSignature());
             }
             return false;
         } catch (Exception e) {
@@ -88,14 +84,10 @@ public class MojangAPI {
             JsonElement element = new JsonParser().parse(output);
             JsonObject obj = element.getAsJsonObject();
 
-            if (obj.has("properties")) {
-                JsonArray properties = obj.getAsJsonArray("properties");
-                JsonObject propertiesObject = properties.get(0).getAsJsonObject();
+            Property property = new Property();
 
-                String signature = propertiesObject.get("signature").getAsString();
-                String value = propertiesObject.get("value").getAsString();
-
-                return SkinStorage.createProperty("textures", value, signature);
+            if (property.valuesFromJson(obj)) {
+                return SkinStorage.createProperty("textures", property.getValue(), property.getSignature());
             }
             return false;
         } catch (Exception e) {
@@ -205,8 +197,6 @@ public class MojangAPI {
     }
 
     private static String readURL(String url) throws MalformedURLException, IOException, SkinRequestException {
-
-
         HttpURLConnection con = (HttpURLConnection) new URL(url).openConnection();
 
         con.setRequestMethod("GET");
@@ -269,5 +259,52 @@ public class MojangAPI {
             return reason;
         }
 
+    }
+
+    private static class Property {
+        private String name;
+        private String value;
+        private String signature;
+
+        public boolean valuesFromJson(JsonObject obj) {
+            if (obj.has("properties")) {
+                JsonArray properties = obj.getAsJsonArray("properties");
+                JsonObject propertiesObject = properties.get(0).getAsJsonObject();
+
+                String signature = propertiesObject.get("signature").getAsString();
+                String value = propertiesObject.get("value").getAsString();
+
+                this.setSignature(signature);
+                this.setValue(value);
+
+                return true;
+            }
+
+            return false;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        public String getValue() {
+            return value;
+        }
+
+        public void setValue(String value) {
+            this.value = value;
+        }
+
+        public String getSignature() {
+            return signature;
+        }
+
+        public void setSignature(String signature) {
+            this.signature = signature;
+        }
     }
 }
