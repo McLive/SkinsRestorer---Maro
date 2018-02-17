@@ -19,10 +19,14 @@ import java.util.regex.Pattern;
 public class MojangAPI {
 
     private static final String uuidurl = "https://api.minetools.eu/uuid/%name%";
-    private static final String uuidurl_mojang = "https://api.mojang.com/users/profiles/minecraft/";
+    private static final String uuidurl_mojang = "https://api.mojang.com/users/profiles/minecraft/%name%";
+
     private static final String skinurl = "https://api.minetools.eu/profile/%uuid%";
-    private static final String skinurl_mojang = "https://sessionserver.mojang.com/session/minecraft/profile/";
+    private static final String skinurl_mojang = "https://sessionserver.mojang.com/session/minecraft/profile/%uuid%?unsigned=false";
+
     private static MojangAPI mojangapi = new MojangAPI();
+
+    // TODO Deal with duplicated code
 
     /**
      * Returned object needs to be casted to either BungeeCord's property or
@@ -37,9 +41,32 @@ public class MojangAPI {
             JsonElement element = new JsonParser().parse(output);
             JsonObject obj = element.getAsJsonObject();
 
-            if(obj.has("raw")) {
+            if (obj.has("raw")) {
                 JsonObject raw = obj.getAsJsonObject("raw");
                 JsonArray properties = raw.getAsJsonArray("properties");
+                JsonObject propertiesObject = properties.get(0).getAsJsonObject();
+
+                String signature = propertiesObject.get("signature").getAsString();
+                String value = propertiesObject.get("value").getAsString();
+
+                return SkinStorage.createProperty("textures", value, signature);
+            }
+            return false;
+        } catch (Exception e) {
+            System.out.println("[SkinsRestorer] Switching to Mojang to get skin property.");
+            return getSkinPropertyMojang(uuid);
+        }
+    }
+
+    public static Object getSkinPropertyMojang(String uuid) throws SkinRequestException {
+        String output;
+        try {
+            output = readURL(skinurl_mojang.replace("%uuid%", uuid));
+            JsonElement element = new JsonParser().parse(output);
+            JsonObject obj = element.getAsJsonObject();
+
+            if (obj.has("properties")) {
+                JsonArray properties = obj.getAsJsonArray("properties");
                 JsonObject propertiesObject = properties.get(0).getAsJsonObject();
 
                 String signature = propertiesObject.get("signature").getAsString();
@@ -57,20 +84,22 @@ public class MojangAPI {
     public static Object getSkinPropertyProxy(String uuid) throws SkinRequestException {
         String output;
         try {
-            output = readURLProxy(skinurl_mojang + uuid + "?unsigned=false");
+            output = readURLProxy(skinurl_mojang.replace("%uuid%", uuid));
+            JsonElement element = new JsonParser().parse(output);
+            JsonObject obj = element.getAsJsonObject();
 
-            String sigbeg = "\",\"signature\":\"";
-            String mid = "[{\"name\":\"textures\",\"value\":\"";
-            String valend = "\"}]";
+            if (obj.has("properties")) {
+                JsonArray properties = obj.getAsJsonArray("properties");
+                JsonObject propertiesObject = properties.get(0).getAsJsonObject();
 
-            String signature = "", value = "";
+                String signature = propertiesObject.get("signature").getAsString();
+                String value = propertiesObject.get("value").getAsString();
 
-            value = getStringBetween(output, mid, sigbeg);
-            signature = getStringBetween(output, sigbeg, valend);;
-
-            return SkinStorage.createProperty("textures", value, signature);
+                return SkinStorage.createProperty("textures", value, signature);
+            }
+            return false;
         } catch (Exception e) {
-            System.out.println("[SkinsRestorer] Failed to get proxy.");
+            System.out.println("[SkinsRestorer] Failed to get skin property from proxy.");
             return false;
         }
     }
@@ -114,8 +143,28 @@ public class MojangAPI {
 
             if (output.isEmpty()) {
                 throw new SkinRequestException(Locale.NOT_PREMIUM);
+            } else if (obj.has("error")) {
+                return getUUIDMojang(name);
             }
-            else if (obj.has("error")) {
+
+            return obj.get("id").getAsString();
+        } catch (IOException e) {
+            System.out.println("[SkinsRestorer] Switching to Mojang to get UUID.");
+            return getUUIDMojang(name);
+        }
+    }
+
+    public static String getUUIDMojang(String name) throws SkinRequestException {
+        String output;
+        try {
+            output = readURL(uuidurl_mojang.replace("%name%", name));
+
+            JsonElement element = new JsonParser().parse(output);
+            JsonObject obj = element.getAsJsonObject();
+
+            if (output.isEmpty()) {
+                throw new SkinRequestException(Locale.NOT_PREMIUM);
+            } else if (obj.has("error")) {
                 return getUUIDProxy(name);
             }
 
@@ -129,14 +178,18 @@ public class MojangAPI {
     public static String getUUIDProxy(String name) throws SkinRequestException {
         String output;
         try {
-            output = readURLProxy(uuidurl_mojang + name);
+            output = readURLProxy(uuidurl_mojang.replace("%name%", name));
 
-            if (output.isEmpty())
+            JsonElement element = new JsonParser().parse(output);
+            JsonObject obj = element.getAsJsonObject();
+
+            if (output.isEmpty()) {
                 throw new SkinRequestException(Locale.NOT_PREMIUM);
-            else if (output.contains("\"error\""))
+            } else if (obj.has("error")) {
                 throw new SkinRequestException(Locale.ALT_API_FAILED);
+            }
 
-            return output.substring(7, 39);
+            return obj.get("id").getAsString();
         } catch (IOException e) {
             throw new SkinRequestException(e.getMessage());
         }
@@ -207,9 +260,11 @@ public class MojangAPI {
     public static class SkinRequestException extends Exception {
 
         private String reason;
+
         public SkinRequestException(String reason) {
             this.reason = reason;
         }
+
         public String getReason() {
             return reason;
         }
