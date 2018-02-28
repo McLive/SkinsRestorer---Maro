@@ -26,6 +26,7 @@ public class Config {
     public static String MYSQL_USERNAME = "admin";
     public static String MYSQL_PASSWORD = "pass";
     public static boolean UPDATER_ENABLED = true;
+    public static boolean SSLHTTPREQUEST = true;
     private static YamlConfig config = new YamlConfig("plugins" + File.separator + "SkinsRestorer" + File.separator + "", "config");
 
     public static void load(InputStream is) {
@@ -50,6 +51,7 @@ public class Config {
         SKINWITHOUTPERM = config.getBoolean("SkinWithoutPerm");
         DEFAULT_SKINS = config.getStringList("DefaultSkins.Names");
         DISABLED_SKINS = config.getStringList("DisabledSkins.Names");
+        SSLHTTPREQUEST = config.getBoolean("SSLHttprequest");
     }
 
     public static void set(String path, Object value) {

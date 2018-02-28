@@ -7,6 +7,7 @@ import com.google.gson.JsonParser;
 import skinsrestorer.bukkit.SkinsRestorer;
 import skinsrestorer.shared.storage.Locale;
 import skinsrestorer.shared.storage.SkinStorage;
+import skinsrestorer.shared.storage.Config;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -20,9 +21,11 @@ import java.util.regex.Pattern;
 public class MojangAPI {
 
     private static final String uuidurl = "https://api.minetools.eu/uuid/%name%";
+    private static final String uuidurl_http = "http://http-api.minetools.eu/uuid/%name%";
     private static final String uuidurl_mojang = "https://api.mojang.com/users/profiles/minecraft/%name%";
 
     private static final String skinurl = "https://api.minetools.eu/profile/%uuid%";
+    private static final String skinurl_http = "http://http-api.minetools.eu/profile/%uuid%";
     private static final String skinurl_mojang = "https://sessionserver.mojang.com/session/minecraft/profile/%uuid%?unsigned=false";
 
     private static MojangAPI mojangapi = new MojangAPI();
@@ -38,7 +41,8 @@ public class MojangAPI {
     public static Object getSkinProperty(String uuid) throws SkinRequestException {
         String output;
         try {
-            output = readURL(skinurl.replace("%uuid%", uuid));
+            String url = (Config.SSLHTTPREQUEST ? skinurl : skinurl_http).replace("%uuid%", uuid);
+            output = readURL(url);
             JsonElement element = new JsonParser().parse(output);
             JsonObject obj = element.getAsJsonObject();
 
@@ -128,7 +132,8 @@ public class MojangAPI {
     public static String getUUID(String name) throws SkinRequestException {
         String output;
         try {
-            output = readURL(uuidurl.replace("%name%", name));
+            String url = (Config.SSLHTTPREQUEST ? uuidurl : uuidurl_http).replace("%name%", name);
+            output = readURL(url);
 
             JsonElement element = new JsonParser().parse(output);
             JsonObject obj = element.getAsJsonObject();

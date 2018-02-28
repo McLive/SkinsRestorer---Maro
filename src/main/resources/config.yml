@@ -10,6 +10,11 @@ SkinExpiresAfter: 1584
 
 # Timeout for skin changing (set to 0 to disable)
 SkinChangeCooldown: 30
+
+# Use SSL http requests to API endpoints to get an users UUID or skin.
+# Turn this to false if you are having issues to reach the used API's.
+# This ~can~ happen if your host blocks connections to port 443.
+SSLHttprequest: true
  
 # Enable or disable default skins
 # If there is more than one, the plugin will choose a random one.
